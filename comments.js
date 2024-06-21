@@ -1,27 +1,47 @@
 // Create a web server
-// Create a route that accepts POST requests to /comments
-// When a POST request is made to /comments, save the request body to a file named comments.txt
-// Respond with a message that says "Comment received"
-// If the comments.txt file already exists, overwrite the file with the new comment
-// If the comments.txt file does not exist, create it and then save the comment
-
 const express = require('express');
-const fs = require('fs');
-
 const app = express();
+const path = require('path');
+const fs = require('fs');
+const bodyParser = require('body-parser');
 
-app.use(express.json());
+// Use body-parser to parse the request body
+app.use(bodyParser.json());
 
-app.post('/comments', (req, res) => {
-  fs.writeFile('comments.txt', req.body.comment, (err) => {
-    if (err) {
-      return res.status(500).send('There was an error saving the comment');
-    }
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
-    res.send('Comment received');
-  });
+// GET /comments
+app.get('/comments', (req, res) => {
+    fs.readFile('comments.json', (err, data) => {
+        if (err) {
+            res.status(500).send('Could not read comments file.');
+            return;
+        }
+        res.json(JSON.parse(data));
+    });
 });
 
+// POST /comments
+app.post('/comments', (req, res) => {
+    fs.readFile('comments.json', (err, data) => {
+        if (err) {
+            res.status(500).send('Could not read comments file.');
+            return;
+        }
+        const comments = JSON.parse(data);
+        comments.push(req.body);
+        fs.writeFile('comments.json', JSON.stringify(comments, null, 2), (err) => {
+            if (err) {
+                res.status(500).send('Could not write comments file.');
+                return;
+            }
+            res.send('Comment added.');
+        });
+    });
+});
+
+// Start the web server on port 3000
 app.listen(3000, () => {
-  console.log('Server is listening on port 3000');
+    console.log('Web server started on http://localhost:3000');
 });
